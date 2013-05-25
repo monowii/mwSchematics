@@ -1,0 +1,6 @@
+author: monowii
+version: 1
+main: me.monowii.mwSchematics.Schematics
+name: mwSchematics
+commands:
+  ms:
