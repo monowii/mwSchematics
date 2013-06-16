@@ -1,12 +1,12 @@
 package me.monowii.mwSchematics;
 
 import java.io.File;
+import java.io.IOException;
 
 import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import com.sk89q.worldedit.CuboidClipboard;
@@ -14,35 +14,32 @@ import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.Vector;
 import com.sk89q.worldedit.bukkit.BukkitWorld;
 import com.sk89q.worldedit.bukkit.WorldEditPlugin;
+import com.sk89q.worldedit.schematic.SchematicFormat;
 
-public class Schematics extends JavaPlugin
+public class mwSchematics extends JavaPlugin
 {
-	private boolean worldEditEnable = false;
-	private EditSession es = null;
-
+	private WorldEditPlugin we = null;
+	
 	public void onEnable()
 	{
-		if (!getDataFolder().exists()) {
-			getDataFolder().mkdir();
+		try {
+			Metrics metrics = new Metrics(this);
+			metrics.start();
 		}
-		if (getWorldEdit().isEnabled())
-		{
-			worldEditEnable = true;
+		catch (IOException e) {
+			System.out.println("Failed to submit data :(");
 		}
-		else
-		{
+		
+		we = (WorldEditPlugin) getServer().getPluginManager().getPlugin("WorldEdit");
+		
+		if (we.isEnabled()) {
+			if (!getDataFolder().exists()) {
+				getDataFolder().mkdir();
+			}
+		}
+		else {
 			System.out.println("Impossible to init worldEdit in mwSchematics !");
 		}
-	}
-
-	private WorldEditPlugin getWorldEdit()
-	{
-		Plugin plugin = getServer().getPluginManager().getPlugin("WorldEdit");
-		if (plugin == null || !(plugin instanceof WorldEditPlugin))
-		{
-			return null;
-		}
-		return (WorldEditPlugin) plugin;
 	}
 
 	public boolean onCommand(CommandSender sender, Command cmd, String CommandLabel, String[] args)
@@ -52,7 +49,7 @@ public class Schematics extends JavaPlugin
 
 		if (cmd.getName().equalsIgnoreCase("ms") && (p == null || p.hasPermission("mwSchematics.admin")))
 		{
-			if (worldEditEnable)
+			if (we.isEnabled())
 			{
 				if (args.length == 0)
 				{
@@ -101,7 +98,6 @@ public class Schematics extends JavaPlugin
 										int yPos = parseInt(args[3]);
 										int zPos = parseInt(args[4]) + 1;
 										String world = args[5];
-										
 										Vector loc = new Vector(xPos, yPos, zPos);
 										
 										if (copySchematic(getServer().getWorld(world), schematicFile, loc, true))
@@ -113,6 +109,14 @@ public class Schematics extends JavaPlugin
 											sender.sendMessage("§cError while pasting schematic");
 										}
 									}
+									else
+									{
+										sender.sendMessage("§cIncorrect world !");
+									}
+								}
+								else
+								{
+									sender.sendMessage("§cIncorrect positions !");
 								}
 							}
 							else
@@ -120,6 +124,14 @@ public class Schematics extends JavaPlugin
 								sender.sendMessage("§cSchematic file not found");
 							}
 						}
+						else
+						{
+							sender.sendMessage("§cIncorrect command usage !");
+						}
+					}
+					else
+					{
+						sender.sendMessage("§cIncorrect command usage !");
 					}
 				}
 			}
@@ -132,18 +144,16 @@ public class Schematics extends JavaPlugin
 		return false;
 	}
 	
-
-	
 	private int parseInt(String number)
 	{
-		return Integer.parseInt(number);
+		return Integer.valueOf(number);
 	}
 	
 	private boolean isInt(String number)
 	{
 		try
 		{
-			Integer.parseInt(number);
+			parseInt(number);
 			return true;
 		}
 		catch (Exception e)
@@ -152,54 +162,20 @@ public class Schematics extends JavaPlugin
 		}
 	}
 
-	public boolean copySchematic(World w, File schematicFile, Vector origin, boolean air)
+	public boolean copySchematic(World w, File schematicFile, Vector origin, boolean p)
 	{
-		if (es == null) {
-			es = new EditSession(new BukkitWorld(w), 999999999);
-		}
-
-		CuboidClipboard cc;
-
-		try
-		{
-			cc = CuboidClipboard.loadSchematic(schematicFile);
-			cc.paste(es, origin, air);
-			return true;
-		}
-		catch (Exception e)
-		{
-			e.printStackTrace();
-		}
+		EditSession es = new EditSession(new BukkitWorld(w), 999999999);
+		
+		SchematicFormat schematic = SchematicFormat.getFormat(schematicFile);
+		 
+        try {
+            CuboidClipboard clipboard = schematic.load(schematicFile);
+            clipboard.paste(es, origin, false);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        
 		return false;
 	}
-	
-	/*@EventHandler
-	public void onInteract(PlayerInteractEvent e) {                //Not usefull, commands blocks works
-		if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-			if (e.getClickedBlock().getState() instanceof Sign) {
-				Sign s = (Sign) e.getClickedBlock().getState();
-				
-				if (s.getLine(0).equalsIgnoreCase("[mwSchematic]"))
-				{
-					File schematicFile = new File(s.getLine(1) + ".schematic");
-					
-					if (schematicFile.exists())
-					{
-						String []pos = s.getLine(2).split(" ");
-						
-						if (isDouble(pos[0]) && isDouble(pos[1]) && isDouble(pos[2]))
-						{
-							double xPos = parseDouble(pos[0]);
-							double yPos = parseDouble(pos[1]);
-							double zPos = parseDouble(pos[2]);
-							
-							Location loc = new Location(s.getWorld(), xPos, yPos, zPos);
-							
-							copySchematic(schematicFile, loc, true);
-						}
-					}
-				}
-			}
-		}
-	}*/
 }
