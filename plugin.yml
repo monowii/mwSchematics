@@ -1,8 +1,8 @@
 author: monowii
-version: 1.1
-main: me.monowii.mwSchematics.mwSchematics
+version: 1.2
+main: me.monowii.mwSchematics.Schem
 name: mwSchematics
 depend: [WorldEdit]
 commands:
-  ms:
+  mws:
     description: Paste schematic with commandBlock
