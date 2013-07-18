@@ -7,16 +7,11 @@ import org.bukkit.command.BlockCommandSender;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import com.sk89q.worldedit.Vector;
 
 public class SchemCommand implements CommandExecutor
 {
-	private JavaPlugin plugin = null;
-	public SchemCommand(JavaPlugin pl) { plugin = pl; }
-	
-	
 	@Override
 	public boolean onCommand(CommandSender sender, Command cmd, String CommandLabel, String[] args)
 	{
@@ -31,57 +26,75 @@ public class SchemCommand implements CommandExecutor
 		}
 		
 		if (args.length == 0) {
-			sender.sendMessage("§a---=[ §2mwSchematics§a v"+plugin.getDescription().getVersion()+" by monowii ]=---");
-			sender.sendMessage("§8<> : Required // [] : Only for commandBlock");
-			sender.sendMessage("§7/mws copy <schematicFileName> <x y z worldName> [relative]");
+			sender.sendMessage("§a---=[ §2mwSchematics§a v"+Schem.getPlugin().getDescription().getVersion()+" by monowii ]=---");
+			sender.sendMessage("§8<> : Required / () : Optional");
+			sender.sendMessage("§7/mws copy <schematicFileName> <x y z worldName> (relative -rel) (copyAir -ca) (removeEntities -re[minecart,drop])");
 		}
-		//If args 0 is copy and is executed by commandBlock or console and args length >= 6
-		else if (args[0].equalsIgnoreCase("copy"))
+		else
 		{
-			if (args.length >= 6)
+			if (args[0].equalsIgnoreCase("copy") && (cmdBlock != null && sender.hasPermission("mwSchematics.admin")))
 			{
-				
-				boolean relativeToCommandBlock = false;
-				//Only supported by commandBlock
-				if (args.length > 6 && cmdBlock != null)
-					if (args[6].equalsIgnoreCase("relative"))
-						relativeToCommandBlock = true;
-				
-				
-				File schematicFile = new File(Schem.WorldEdit.getDataFolder() + File.separator + "schematics", args[1] + ".schematic");
-				
-				if (schematicFile.exists())
+				if (args.length >= 6)
 				{
-					//Check if positions are double and world exist
-					if (Utils.isInt(args[2]) && Utils.isInt(args[3]) && Utils.isInt(args[4]) && plugin.getServer().getWorld(args[5]) != null) 
+					File schematicFile = new File(Schem.WorldEdit.getDataFolder() + File.separator + "schematics", args[1] + ".schematic");
+					
+					//Only supported by commandBlock
+					boolean relativeToCommandBlock = false;
+					if (args.length > 6 && cmdBlock != null)
+						if (Utils.argsContain(args, "-rel"))
+							relativeToCommandBlock = true;
+					
+					boolean copyAir = false;
+					if (args.length > 6)
+						if (Utils.argsContain(args, "-ca"))
+							copyAir = true;
+					
+					boolean removeEntities = false;
+					String entitiesToRemove[] = null;
+					if (args.length > 6)
+						for (int i = 0 ; i < args.length ; i++)
+							if (args[i].startsWith("-re")) {
+								//If entities are specified
+								if (args[i].length() > 5)
+									entitiesToRemove = args[i].substring(3).replace("[", "").replace("]", "").split(",");
+								
+								removeEntities = true;
+							}
+					
+					if (schematicFile.exists())
 					{
-						int xPos = Utils.parseInt(args[2]);
-						int yPos = Utils.parseInt(args[3]);
-						int zPos = Utils.parseInt(args[4]);
-						
-						if (relativeToCommandBlock) {
-							xPos = cmdBlock.getBlock().getX() + xPos;
-							yPos = cmdBlock.getBlock().getY() + yPos;
-							zPos = cmdBlock.getBlock().getZ() + zPos;
-						}
-						
-						String world = args[5];
-						Vector loc = new Vector(xPos, yPos, zPos);
-						
-						if (Utils.copySchematic(plugin.getServer().getWorld(world), schematicFile, loc)) {
-							sender.sendMessage("§aSchematic pasted !");
+						if (Utils.isInt(args[2]) && Utils.isInt(args[3]) && Utils.isInt(args[4]) && Schem.getPlugin().getServer().getWorld(args[5]) != null) 
+						{
+							int xPos = Utils.parseInt(args[2]);
+							int yPos = Utils.parseInt(args[3]);
+							int zPos = Utils.parseInt(args[4]);
+							
+							if (relativeToCommandBlock) {
+								xPos = cmdBlock.getBlock().getX() + xPos;
+								yPos = cmdBlock.getBlock().getY() + yPos;
+								zPos = cmdBlock.getBlock().getZ() + zPos;
+							}
+							
+							String worldName = args[5];
+							Vector origin = new Vector(xPos, yPos, zPos);
+							
+							if (Utils.copySchematic(Schem.getPlugin().getServer().getWorld(worldName), schematicFile, origin, copyAir, removeEntities, entitiesToRemove)) {
+								sender.sendMessage("§aSchematic pasted !");
+							} else {
+								sender.sendMessage("§cError while pasting schematic");
+							}
 						} else {
-							sender.sendMessage("§cError while pasting schematic");
+							sender.sendMessage("§cBad positions");
 						}
+					} else {
+						sender.sendMessage("§cThis schematic file not exist");
 					}
+				} else {
+					sender.sendMessage("§cBad command arguments");
 				}
 			} else {
-				sender.sendMessage("§4Bad command arguments");
+				sender.sendMessage("§cUnknown argument");
 			}
-			
-			
-		} else {
-			sender.sendMessage("§4Only command block can execute mwSchematics commands !");
 		}
 		
 

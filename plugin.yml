@@ -1,5 +1,5 @@
 author: monowii
-version: 1.2
+version: 1.3
 main: me.monowii.mwSchematics.Schem
 name: mwSchematics
 depend: [WorldEdit]
